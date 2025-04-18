@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import RecipeSearch from './pages/RecipeSearch';
-import RecipeDetail from './components/RecipeDetail';
+import RecipeDetail from './pages/RecipeDetail';
+import FavoritesPage from './pages/FavoritesPage';
 
 function App() {
   return (
@@ -8,6 +9,7 @@ function App() {
       <Routes>
         <Route path="/" element={<RecipeSearch />} />
         <Route path="/recipe/:id" element={<RecipeDetail />} />
+        <Route path="/favorites" element={<FavoritesPage />} />
       </Routes>
     </BrowserRouter>
   );

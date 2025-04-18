@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Users, ChefHat, Search } from 'lucide-react';
+import { X, Clock, Users, ChefHat, Search, Heart, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { searchRecipesByIngredients, getAllRecipes } from '../api/recipes';
 
@@ -9,6 +9,7 @@ const RecipeSearch = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [customIngredient, setCustomIngredient] = useState('');
   const navigate = useNavigate();
 
   const suggestedIngredients = [
@@ -83,14 +84,32 @@ const RecipeSearch = () => {
     );
   };
 
+  const handleAddCustomIngredient = (e) => {
+    e.preventDefault();
+    if (customIngredient.trim() && !selectedIngredients.includes(customIngredient.trim())) {
+      addIngredient(customIngredient.trim());
+      setCustomIngredient('');
+    }
+  };
+
   const handleRecipeClick = (recipe) => {
     navigate(`/recipe/${recipe.id}`, { state: { recipe } });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 to-red-50">
-      <div className="bg-gradient-to-r from-red-100 to-rose-100 py-12 mb-8">
+      <div className="bg-gradient-to-r from-red-100 to-rose-100 py-12 mb-8 relative">
         <div className="container mx-auto px-4">
+          <div className="absolute top-4 right-4">
+            <button
+              onClick={() => navigate('/favorites')}
+              className="bg-white/80 backdrop-blur-sm text-red-600 p-2 rounded-full hover:bg-white hover:text-red-700 transition-colors shadow-md hover:shadow-lg"
+              title="View favorites"
+            >
+              <Heart className="h-6 w-6" />
+            </button>
+          </div>
+
           <div className="flex items-center justify-center mb-2">
             <img src="images/Logo_recette.png" alt="Chef Hat" className="h-52 w-52" />
           </div>
@@ -119,6 +138,30 @@ const RecipeSearch = () => {
             </div>
           </div>
 
+          {/* Custom ingredient input */}
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold text-red-800 mb-4">
+              Add your own ingredient
+            </h3>
+            <form onSubmit={handleAddCustomIngredient} className="flex gap-2">
+              <input
+                type="text"
+                value={customIngredient}
+                onChange={(e) => setCustomIngredient(e.target.value)}
+                placeholder="Enter an ingredient..."
+                className="flex-1 px-4 py-3 rounded-xl border-2 border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-200 focus:outline-none transition-all"
+              />
+              <button
+                type="submit"
+                className="bg-red-600 hover:bg-red-700 text-white rounded-xl px-4 py-3 flex items-center gap-2 transition-colors"
+                disabled={!customIngredient.trim()}
+              >
+                <Plus className="w-5 h-5" />
+                <span>Add</span>
+              </button>
+            </form>
+          </div>
+
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-red-800 mb-4">
               Your selected ingredients
@@ -127,7 +170,11 @@ const RecipeSearch = () => {
               {selectedIngredients.map(ingredient => (
                 <span
                   key={ingredient}
-                  className="bg-gradient-to-r from-red-50 to-rose-100 text-red-800 px-4 py-2 rounded-full flex items-center gap-2 shadow-sm hover:shadow-md transition-all"
+                  className={`px-4 py-2 rounded-full flex items-center gap-2 shadow-sm hover:shadow-md transition-all ${
+                    suggestedIngredients.includes(ingredient)
+                      ? 'bg-gradient-to-r from-red-50 to-rose-100 text-red-800' 
+                      : 'bg-gradient-to-r from-purple-50 to-indigo-100 text-indigo-800'
+                  }`}
                 >
                   {ingredient}
                   <button
@@ -138,6 +185,9 @@ const RecipeSearch = () => {
                   </button>
                 </span>
               ))}
+              {selectedIngredients.length === 0 && (
+                <span className="text-red-400 italic">No ingredients selected yet</span>
+              )}
             </div>
           </div>
 

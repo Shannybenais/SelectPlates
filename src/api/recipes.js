@@ -19,7 +19,7 @@ const ingredientTranslations = {
   'egg': 'egg',
   'cheese': 'cheese',
   'butter': 'butter',
-  
+  // Les ingrédients personnalisés seront traduits automatiquement ou utilisés tels quels
 };
 
 // Fonction pour rechercher des recettes par ingrédients
@@ -30,7 +30,7 @@ export const searchRecipesByIngredients = async (ingredients) => {
       ingredientTranslations[ing.toLowerCase()] || ing
     );
     
-    console.log('Translated ingredients:', translatedIngredients);
+    console.log('Searching with ingredients:', translatedIngredients);
 
     // Rechercher les recettes en utilisant le premier ingrédient
     const mainIngredient = translatedIngredients[0];
@@ -42,7 +42,21 @@ export const searchRecipesByIngredients = async (ingredients) => {
     // Vérifier si des recettes ont été trouvées
     if (!data.meals) {
       console.log('No recipes found for the main ingredient');
-      return [];
+      
+      // Si le premier ingrédient ne donne pas de résultats, essayer avec d'autres ingrédients de la liste
+      for (let i = 1; i < translatedIngredients.length; i++) {
+        const altResponse = await fetch(`${API_BASE_URL}/filter.php?i=${encodeURIComponent(translatedIngredients[i])}`);
+        const altData = await altResponse.json();
+        
+        if (altData.meals) {
+          console.log(`Found recipes using alternative ingredient: ${translatedIngredients[i]}`);
+          data.meals = altData.meals;
+          break;
+        }
+      }
+      
+      // Si toujours pas de résultats, retourner un tableau vide
+      if (!data.meals) return [];
     }
 
     // Obtenir les détails pour les 20 premières recettes trouvées
@@ -60,11 +74,21 @@ export const searchRecipesByIngredients = async (ingredients) => {
         const recipeIngredients = getIngredients(meal);
         
         // Vérifier si la recette contient d'autres ingrédients requis
-        const hasRequiredIngredients = translatedIngredients.slice(1).some(ing =>
-          recipeIngredients.some(ri => 
+        // Pour les ingrédients personnalisés, on vérifie s'ils sont présents dans les ingrédients
+        // ou dans les instructions (pour gérer les cas où l'ingrédient pourrait être mentionné différemment)
+        const hasRequiredIngredients = translatedIngredients.slice(1).every(ing => {
+          // Vérifier dans les ingrédients
+          const ingredientMatch = recipeIngredients.some(ri => 
             ri.name.toLowerCase().includes(ing.toLowerCase())
-          )
-        );
+          );
+          
+          // Si pas trouvé dans les ingrédients, vérifier dans les instructions
+          if (!ingredientMatch && meal.strInstructions) {
+            return meal.strInstructions.toLowerCase().includes(ing.toLowerCase());
+          }
+          
+          return ingredientMatch;
+        });
         
         // Si les ingrédients requis ne sont pas présents, exclure cette recette
         if (!hasRequiredIngredients && translatedIngredients.length > 1) return null;
@@ -76,7 +100,11 @@ export const searchRecipesByIngredients = async (ingredients) => {
           image: meal.strMealThumb,
           category: translateCategory(meal.strCategory),
           instructions: formatInstructions(meal.strInstructions),
-          ingredients: recipeIngredients
+          ingredients: recipeIngredients,
+          // Ajouter les ingrédients personnalisés qui ne sont pas déjà dans la recette
+          customIngredients: translatedIngredients.filter(ing => 
+            !recipeIngredients.some(ri => ri.name.toLowerCase().includes(ing.toLowerCase()))
+          )
         };
       })
     );
@@ -125,7 +153,8 @@ export const getAllRecipes = async () => {
               image: meal.strMealThumb,
               category: translateCategory(meal.strCategory),
               instructions: formatInstructions(meal.strInstructions),
-              ingredients: getIngredients(meal)
+              ingredients: getIngredients(meal),
+              customIngredients: []
             };
           })
         );
